@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HimUp</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="splash-screen" id="splashScreen">
+  <div class="splash-container sticker-glow" id="splashAnimContainer"></div>
+  <div class="splash-text" id="splashLogo">Him<span style="color:#ef4444">Up</span></div>
+  <div class="spinner"></div>
+</div>
+
+<div class="app">
+  <div class="header">
+    <div class="logo" id="siteLogo">Him<span>Up</span></div>
+    <div class="header-actions">
+      <div class="balance-pill"><div class="coin">₽</div> <span id="balText">0</span></div>
+      <button class="avatar-btn" onclick="switchBottomTab('profile', document.getElementById('nav-profile'))"><img src="" id="userAvatar" class="avatar"></button>
+    </div>
+  </div>
+  <div class="top-tabs">
+    <button class="top-tab active" onclick="switchMainTab('cases', this)">Кейсы</button>
+    <button class="top-tab" onclick="switchMainTab('games', this)">Игры</button>
+    <button class="top-tab" onclick="switchMainTab('settings', this)">Настройки</button>
+  </div>
+  <div id="screen-cases" class="screen active">
+    <div class="section-title">Бесплатные</div>
+    <div class="cases-grid" id="freeGrid"></div>
+    <div class="section-title" style="margin-top:24px;">Платные кейсы</div>
+    <div class="cases-grid" id="paidGrid"></div>
+  </div>
+  <div id="screen-games" class="screen">
+    <div class="section-title">Мини-игры</div>
+    <div class="games-grid">
+      <div class="game-card" onclick="openGame('rocket')"><div class="game-banner" id="bannerRocket"></div><div class="game-content"><div class="game-info"><h3>Ракета</h3><p>Успей забрать до взрыва</p></div><div class="game-play-btn">Играть</div></div></div>
+      <div class="game-card" onclick="openGame('mines')"><div class="game-banner" id="bannerMines"></div><div class="game-content"><div class="game-info"><h3>Мины</h3><p>Ищи звезды, избегай бомб</p></div><div class="game-play-btn">Играть</div></div></div>
+    </div>
+  </div>
+  <div id="screen-settings" class="screen">
+    <div class="section-title">Настройки</div>
+    <div class="settings-list">
+      <div class="settings-item" style="flex-direction:column; align-items:flex-start; gap:12px;">
+        <span>Выбор темы</span>
+        <div class="theme-grid" style="padding:0; width:100%;">
+          <div class="theme-dot active" style="background:#0b0e14;" onclick="setTheme('#0b0e14', '#7c3aed', this)"></div>
+          <div class="theme-dot" style="background:#ffb6c1;" onclick="setTheme('#1a1114', '#ff69b4', this)"></div>
+          <div class="theme-dot" style="background:#3b82f6;" onclick="setTheme('#0f172a', '#3b82f6', this)"></div>
+          <div class="theme-dot" style="background:#ffffff;" onclick="setTheme('#f3f4f6', '#8b5cf6', this)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="secret-btn" id="secretPolicy" onclick="tapPolicy()">Политика конфиденциальности v1.0</div>
+  </div>
+  <div id="screen-profile" class="screen">
+    <div class="section-title">Мой профиль</div>
+    <div class="profile-header">
+      <img src="" id="profAvatar" class="profile-avatar">
+      <div class="profile-name" id="profName">Загрузка...</div>
+      <div class="profile-tg" id="profTg">@user</div>
+      <div class="profile-balance"><div class="coin">₽</div> <span id="profBal">0</span></div>
+      <div class="profile-buttons">
+        <button class="btn-deposit" onclick="openDeposit()">Пополнить</button>
+        <button class="btn-withdraw" onclick="handleWithdraw()">Вывести</button>
+      </div>
+    </div>
+    <div class="section-title" style="font-size:16px; margin-top:20px;">Мой инвентарь</div>
+    <div class="inventory-grid" id="inventoryGrid"></div>
+  </div>
+  <div id="screen-top" class="screen">
+    <div class="section-title">Топ игроков</div>
+    <div class="leaderboard" id="leaderboardList"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="switchBottomTab('cases', this)">Главная</button>
+    <button class="nav-btn" id="nav-top" onclick="switchBottomTab('top', this)">Топ</button>
+    <button class="nav-btn" id="nav-profile" onclick="switchBottomTab('profile', this)">Профиль</button>
+  </div>
+</div>
+
+<div class="fullscreen-modal" id="depositScreen">
+  <div class="modal-header"><div style="font-size:20px; font-weight:900; color:#fff;">Пополнение</div><button class="back-btn" onclick="closeModal('depositScreen')">✕</button></div>
+  <div class="modal-content">
+    <div class="section-title">Выберите способ</div>
+    <div class="deposit-option" onclick="payWithStars()"><div class="deposit-icon">⭐</div><div class="deposit-info"><h4>Telegram Stars</h4><p>Мгновенное зачисление</p></div></div>
+    <div class="deposit-option" onclick="payWithCrypto()"><div class="deposit-icon">💎</div><div class="deposit-info"><h4>Криптовалюта</h4><p>USDT (TRC-20), TON, BTC</p></div></div>
+  </div>
+</div>
+
+<div class="fullscreen-modal" id="caseScreen">
+  <div class="modal-header"><div style="font-size:20px; font-weight:900; color:#fff;" id="caseTitle">Кейс</div><button class="back-btn" onclick="closeModal('caseScreen')">✕</button></div>
+  <div class="modal-content"><div id="spinArea"><div class="roulette-wrap"><div class="center-line"></div><div class="strip" id="strip"></div></div><button class="spin-btn" id="spinBtn" onclick="spin()">Крутить</button><div class="section-title">Что может выпасть</div><div class="prizes-container" id="prizesGrid"></div></div></div>
+</div>
+
+<div class="fullscreen-modal" id="gameRocketScreen">
+  <div class="modal-header"><div style="font-size:20px; font-weight:900; color:#fff;">🚀 Ракета</div><button class="back-btn" onclick="closeRocket()">✕</button></div>
+  <div class="modal-content"><div class="rocket-container"><canvas id="rocketCanvas" class="rocket-canvas"></canvas><div class="rocket-ui"><div class="rocket-multiplier" id="rocketMult">1.00x</div><div class="crash-message" id="crashMsg">ВЗОРВАЛОСЬ!</div></div></div><div class="bet-row"><input type="number" id="rocketBet" class="bet-input" value="10"><button class="action-btn" id="rocketActionBtn" onclick="rocketAction()">Играть</button></div></div>
+</div>
+
+<div class="fullscreen-modal" id="gameMinesScreen">
+  <div class="modal-header"><div style="font-size:20px; font-weight:900; color:#fff;">💣 Мины</div><button class="back-btn" onclick="closeMines()">✕</button></div>
+  <div class="modal-content"><div style="display:flex; justify-content:space-between; margin-bottom:16px; font-weight:800; font-size:16px; color:#fff;"><div>Множитель: <span id="minesMult" style="color:#2ed573;">1.00x</span></div><div>Выигрыш: <span id="minesWin" style="color:#2ed573;">0₽</span></div></div><div class="mines-grid" id="minesGrid"></div><div class="bet-row"><input type="number" id="minesBet" class="bet-input" value="10"><button class="action-btn" id="minesActionBtn" onclick="minesAction()">Играть</button></div></div>
+</div>
+
+<div class="admin-modal" id="adminModal"><div class="admin-content" id="adminContent"></div></div>
+
+<script src="script.js"></script>
+</body>
+</html>
