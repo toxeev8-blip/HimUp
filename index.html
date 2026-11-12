@@ -776,9 +776,234 @@ function payWithStars() { if (tg) { tg.showPopup({ title: 'Оплата Stars', 
 function payWithCrypto() { if (tg) { tg.openLink('https://t.me/yahimki'); } else { window.open('https://t.me/yahimki', '_blank'); } alert("Для оплаты криптовалютой напишите владельцу: @yahimki"); }
 function handleWithdraw() { if (tg) { tg.openTelegramLink("https://t.me/yahimki"); } else { window.open("https://t.me/yahimki", "_blank"); } alert("Вывод доступен только для стикеров.\n\nНапишите нашему владельцу: @yahimki"); }
 
-window.onload = async function() {
+// ==========================================
+// АДМИНКА (НЕЗАВИСИМЫЙ БЛОК)
+// ==========================================
+function tapPolicy() {
+  policyTaps++;
+  if (policyTaps >= 5) { 
+    policyTaps = 0; 
+    if (tgUser && tgUser.id === MY_TELEGRAM_ID) { 
+      // Принудительно открываем окно и заполняем его
+      var modal = document.getElementById('adminModal');
+      modal.classList.add('active');
+      
+      // Вставляем базовый HTML для админки
+      document.getElementById('adminContent').innerHTML = `
+        <div class="admin-header"><h2>Админка</h2><div class="close-admin" onclick="closeModal('adminModal')">✕</div></div>
+        <div class="admin-tabs">
+          <div class="adm-tab active" onclick="switchAdminTab('design')">Сайт</div>
+          <div class="adm-tab" onclick="switchAdminTab('banners')">Баннеры</div>
+          <div class="adm-tab" onclick="switchAdminTab('cases')">Кейсы</div>
+          <div class="adm-tab" onclick="switchAdminTab('players')">Игроки</div>
+        </div>
+        <div id="adminBody">Загрузка...</div>
+      `;
+      
+      // Запускаем отрисовку
+      renderAdmin('design');
+    } else { 
+      alert("Политика конфиденциальности v1.0"); 
+    }
+  }
+}
+
+let currentAdminTab = 'design';
+
+function switchAdminTab(tab) { 
+  currentAdminTab = tab; 
+  document.querySelectorAll('.adm-tab').forEach((t, i) => {
+    t.classList.remove('active');
+    if ((tab === 'design' && i === 0) || (tab === 'banners' && i === 1) || (tab === 'cases' && i === 2) || (tab === 'players' && i === 3)) {
+      t.classList.add('active');
+    }
+  });
+  renderAdmin(tab); 
+}
+
+function renderAdmin(tab) {
+  var body = document.getElementById('adminBody');
+  if (!body) return;
+
+  if (tab === 'design') {
+    body.innerHTML = `
+      <div class="form-group"><label>Логотип (Левая часть)</label><input type="text" id="cfgLogoText" value="${siteConfig.logoText || 'Him'}"></div>
+      <div class="form-group"><label>Логотип (Правая часть)</label><input type="text" id="cfgLogoAccent" value="${siteConfig.logoAccent || 'Up'}"></div>
+      <div class="form-group"><label>Цвет акцента (HEX)</label><input type="text" id="cfgAccent" value="${siteConfig.accentColor || '#7c3aed'}"></div>
+      <div class="form-group"><label>Ракета (Эмодзи/Файл)</label><input type="file" id="cfgRocketFile" accept="image/*" style="margin-bottom:8px;"><input type="text" id="cfgRocketEmoji" placeholder="Эмодзи (🚀)" value="${(siteConfig.rocketImage && siteConfig.rocketImage.includes('data')) ? '' : (siteConfig.rocketImage || '🚀')}"></div>
+      <div class="form-group"><label>Стикер загрузки (Файл)</label><input type="file" id="cfgSplashFile" accept="image/*" style="margin-bottom:8px;"><input type="text" id="cfgSplashEmoji" placeholder="Эмодзи (🎁)" value="${(siteConfig.splashSticker && siteConfig.splashSticker.includes('data')) ? '' : (siteConfig.splashSticker || '🎁')}"></div>
+      <button class="admin-btn" onclick="saveAdminDesign()">Сохранить сайт</button>
+    `;
+  }
+  
+  if (tab === 'banners') {
+    body.innerHTML = `
+      <div class="item-box"><label>Баннер: Ракета</label><div style="font-size:40px; margin-bottom:10px; text-align:center; height:100px; background:#000; display:flex; align-items:center; justify-content:center;">${(siteConfig.bannerRocket && siteConfig.bannerRocket.includes('data')) ? '<img src="' + siteConfig.bannerRocket + '" style="width:100%; height:100%; object-fit:cover;">' : (siteConfig.bannerRocket || '🚀')}</div><input type="file" id="bannerRocketFile" accept="image/*" style="margin-bottom:8px; width:100%;"><input type="text" id="bannerRocketEmoji" placeholder="Эмодзи" value="${(siteConfig.bannerRocket && siteConfig.bannerRocket.includes('data')) ? '' : (siteConfig.bannerRocket || '🚀')}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #2a2e3d; background:#000; color:#fff;"></div>
+      <div class="item-box" style="margin-top:15px;"><label>Баннер: Мины</label><div style="font-size:40px; margin-bottom:10px; text-align:center; height:100px; background:#000; display:flex; align-items:center; justify-content:center;">${(siteConfig.bannerMines && siteConfig.bannerMines.includes('data')) ? '<img src="' + siteConfig.bannerMines + '" style="width:100%; height:100%; object-fit:cover;">' : (siteConfig.bannerMines || '💣')}</div><input type="file" id="bannerMinesFile" accept="image/*" style="margin-bottom:8px; width:100%;"><input type="text" id="bannerMinesEmoji" placeholder="Эмодзи" value="${(siteConfig.bannerMines && siteConfig.bannerMines.includes('data')) ? '' : (siteConfig.bannerMines || '💣')}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #2a2e3d; background:#000; color:#fff;"></div>
+      <button class="admin-btn" style="margin-top:20px;" onclick="saveAdminBanners()">Сохранить баннеры</button>
+    `;
+  }
+  
+  if (tab === 'cases') {
+    var opts = Object.values(CASES).map(function(c) { return '<option value="' + c.id + '">' + c.title + '</option>'; }).join('');
+    body.innerHTML = '<div class="form-group"><label>Выберите кейс</label><select id="admCaseSelect" onchange="renderCaseEdit()">' + opts + '</select></div><div id="caseEditArea"></div><button class="admin-btn" style="background:#6366f1;" onclick="createNewCase()">+ Создать кейс</button>';
+    renderCaseEdit();
+  }
+  
+  if (tab === 'players') {
+    body.innerHTML = `
+      <div class="section-title" style="font-size:16px; margin-bottom:12px;">Выдача денег игроку</div>
+      <div class="form-group"><label>Telegram ID игрока</label><input type="text" id="admPlayerId" placeholder="Например: 123456789"></div>
+      <div class="form-group"><label>Сумма (в рублях)</label><input type="number" id="admPlayerSum" value="100"></div>
+      <button class="admin-btn" style="background:#3b82f6; color:#fff;" onclick="giveMoneyToPlayer()">Выдать баланс</button>
+    `;
+  }
+  
+  // Навешиваем обработчики для файлов
+  setTimeout(function() {
+    var rFile = document.getElementById('cfgRocketFile');
+    if (rFile) rFile.addEventListener('change', function(e) { var f = e.target.files[0]; if (f) { var r = new FileReader(); r.onload = function(ev) { siteConfig.rocketImage = ev.target.result; }; r.readAsDataURL(f); } });
+    var sFile = document.getElementById('cfgSplashFile');
+    if (sFile) sFile.addEventListener('change', function(e) { var f = e.target.files[0]; if (f) { var r = new FileReader(); r.onload = function(ev) { siteConfig.splashSticker = ev.target.result; }; r.readAsDataURL(f); } });
+    var brFile = document.getElementById('bannerRocketFile');
+    if (brFile) brFile.addEventListener('change', function(e) { var f = e.target.files[0]; if (f) { var r = new FileReader(); r.onload = function(ev) { siteConfig.bannerRocket = ev.target.result; }; r.readAsDataURL(f); } });
+    var bmFile = document.getElementById('bannerMinesFile');
+    if (bmFile) bmFile.addEventListener('change', function(e) { var f = e.target.files[0]; if (f) { var r = new FileReader(); r.onload = function(ev) { siteConfig.bannerMines = ev.target.result; }; r.readAsDataURL(f); } });
+  }, 100);
+}
+
+// ==========================================
+// ФУНКЦИИ АДМИНКИ
+// ==========================================
+async function giveMoneyToPlayer() {
+  var targetId = document.getElementById('admPlayerId').value.trim(); 
+  var sum = parseInt(document.getElementById('admPlayerSum').value);
+  if (!targetId) return alert('Введите ID игрока!'); 
+  if (!sum || sum <= 0) return alert('Введите корректную сумму!');
+  try {
+    var res = await supabaseClient.from('players').select('*').eq('id', targetId).single();
+    if (res.data) {
+      await supabaseClient.from('players').update({ balance: res.data.balance + sum }).eq('id', targetId);
+      alert('Успешно выдано ' + sum + '₽ игроку ' + res.data.first_name + ' (' + targetId + ')!');
+      if (targetId == userData.id) { balance += sum; render(); }
+    } else { alert('Игрок с таким ID не найден в базе.'); }
+  } catch(e) { alert('Ошибка базы!'); }
+}
+
+async function saveAdminDesign() {
+  siteConfig.logoText = document.getElementById('cfgLogoText').value; 
+  siteConfig.logoAccent = document.getElementById('cfgLogoAccent').value;
+  siteConfig.accentColor = document.getElementById('cfgAccent').value;
+  if (document.getElementById('cfgRocketEmoji').value) siteConfig.rocketImage = document.getElementById('cfgRocketEmoji').value;
+  if (document.getElementById('cfgSplashEmoji').value) siteConfig.splashSticker = document.getElementById('cfgSplashEmoji').value;
+  applyDesign(); render(); await saveConfig(); alert('Настройки сохранены!');
+}
+
+async function saveAdminBanners() {
+  if (document.getElementById('bannerRocketEmoji').value) siteConfig.bannerRocket = document.getElementById('bannerRocketEmoji').value;
+  if (document.getElementById('bannerMinesEmoji').value) siteConfig.bannerMines = document.getElementById('bannerMinesEmoji').value;
+  applyDesign(); await saveConfig(); alert('Баннеры сохранены!');
+}
+
+function renderCaseEdit() {
+  var id = document.getElementById('admCaseSelect').value;
+  var c = CASES[id];
+  if (!c) return;
+  var isImg = c.mainImg && c.mainImg.includes('data:');
+  document.getElementById('caseEditArea').innerHTML = `
+    <div class="item-box">
+      <div class="form-group"><label>Название</label><input type="text" id="admCaseTitle" value="${c.title}"></div>
+      <div class="form-group"><label>Цена</label><input type="number" id="admCasePrice" value="${c.price}"></div>
+      <div class="form-group"><label>Иконка Кейса</label><input type="file" id="admCaseFile" accept="image/*" style="margin-bottom:8px;"><input type="text" id="admCaseEmoji" placeholder="Эмодзи" value="${isImg ? '' : (c.mainImg || '🎁')}"></div>
+      <button class="admin-btn" style="background:#7c3aed; color:#fff;" onclick="saveAdminCase('${id}')">Сохранить</button>
+      <button class="admin-btn" style="background:#ef4444; color:#fff;" onclick="deleteAdminCase('${id}')">Удалить</button>
+    </div>
+    <h3 style="margin:20px 0 10px; font-size:14px; color:#fff;">Предметы в кейсе:</h3>
+    ${(c.rewards || []).map(function(r, i) { return `
+      <div class="item-box" style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          ${(r.img && r.img.includes('data:')) ? '<img src="' + r.img + '" style="width:30px;height:30px;object-fit:contain;">' : '<span style="font-size:24px;">' + (r.img || '📦') + '</span>'}
+          <div style="color:#fff;"><b>${r.name}</b> <br><span style="font-size:11px; color:#8b92a5;">Шанс: ${r.chance} | Цена: ${r.sellPrice}₽</span></div>
+        </div>
+        <span style="color:red; cursor:pointer; font-size:16px; font-weight:bold;" onclick="deleteAdminItem('${id}', ${i})">✕</span>
+      </div>
+    `; }).join('')}
+    <button class="admin-btn" style="background:#3b82f6; color:#fff;" onclick="openAddItemForm('${id}')">+ Добавить предмет</button>
+    <div id="addItemForm" style="display:none; margin-top:10px;"></div>
+  `;
+  var aFile = document.getElementById('admCaseFile');
+  if (aFile) aFile.addEventListener('change', function(e) { var f = e.target.files[0]; if (f) { var r = new FileReader(); r.onload = function(ev) { CASES[id].mainImg = ev.target.result; render(); renderCaseEdit(); }; r.readAsDataURL(f); } });
+}
+
+function openAddItemForm(id) {
+  document.getElementById('addItemForm').style.display = 'block';
+  document.getElementById('addItemForm').innerHTML = `
+    <div class="item-box" style="border:1px solid #3b82f6;">
+      <div class="form-group"><label>Название предмета</label><input type="text" id="newItemName" placeholder="Например: 10₽"></div>
+      <div class="form-group"><label>Иконка предмета</label><input type="file" id="newItemFile" accept="image/*" style="margin-bottom:8px;"><input type="text" id="newItemEmoji" placeholder="Эмодзи (🎁)"></div>
+      <div class="form-group"><label>Шанс выпадения</label><input type="number" id="newItemChance" value="10"></div>
+      <div class="form-group"><label>Цена продажи (в рублях)</label><input type="number" id="newItemSellPrice" value="10"></div>
+      <button class="admin-btn" onclick="saveNewItem('${id}')">Добавить</button>
+    </div>
+  `;
+}
+
+let newItemImgBase64 = null;
+document.addEventListener('change', function(e) { 
+  if(e.target.id === 'newItemFile') { 
+    var f = e.target.files[0]; 
+    if(f) { 
+      var r = new FileReader(); 
+      r.onload = function(ev) { 
+        newItemImgBase64 = ev.target.result; 
+        var em = document.getElementById('newItemEmoji');
+        if(em) em.value = ''; 
+      }; 
+      r.readAsDataURL(f); 
+    } 
+  } 
+});
+
+async function saveNewItem(id) {
+  var name = document.getElementById('newItemName').value; 
+  var emoji = document.getElementById('newItemEmoji').value;
+  var chance = parseInt(document.getElementById('newItemChance').value) || 10; 
+  var sellPrice = parseInt(document.getElementById('newItemSellPrice').value) || 10;
+  var img = newItemImgBase64 || emoji || '📦';
+  CASES[id].rewards.push({ type: 'sticker', name: name, chance: chance, img: img, sellPrice: sellPrice });
+  newItemImgBase64 = null; render(); renderCaseEdit(); await saveConfig(); alert('Предмет добавлен!');
+}
+
+function deleteAdminItem(caseId, index) { CASES[caseId].rewards.splice(index, 1); render(); renderCaseEdit(); saveConfig(); }
+
+async function saveAdminCase(id) {
+  CASES[id].title = document.getElementById('admCaseTitle').value; 
+  CASES[id].price = parseInt(document.getElementById('admCasePrice').value) || 0;
+  CASES[id].isFree = CASES[id].price === 0;
+  var emoji = document.getElementById('admCaseEmoji').value;
+  if (emoji) CASES[id].mainImg = emoji;
+  render(); await saveConfig(); alert('Кейс сохранен!');
+}
+
+function deleteAdminCase(id) { 
+  if(confirm('Удалить кейс?')) { 
+    delete CASES[id]; 
+    render(); 
+    switchAdminTab('cases'); 
+    saveConfig(); 
+  } 
+}
+
+async function createNewCase() {
+  var newId = 'case_' + Date.now();
+  CASES[newId] = { id: newId, title: 'Новый кейс', price: 10, isFree: false, mainImg: '🎁', rewards: [] };
+  render(); switchAdminTab('cases'); document.getElementById('admCaseSelect').value = newId; renderCaseEdit(); await saveConfig();
+}
+
+// ЗАПУСК
+window.onload = function() {
   initSplash();
-  await initApp();
+  initApp();
 };
 </script>
 </body>
